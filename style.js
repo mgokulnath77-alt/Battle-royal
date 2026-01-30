@@ -1,0 +1,14 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial;
+}
+
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  background: rgba(0,0,0,0.5);
+  padding: 10px;
+}
