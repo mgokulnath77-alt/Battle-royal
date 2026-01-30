@@ -64,4 +64,6 @@ if alive_bots == 0:
     st.stop()
 
 time.sleep(0.3)
-st.experimental_rerun()
+st.rerun()
+
+
