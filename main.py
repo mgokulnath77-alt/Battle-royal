@@ -1,60 +1,67 @@
-import pygame
-from player import Player
-from bot import Bot
-from zone import Zone
+import streamlit as st
+import random
+import math
+import time
 
-pygame.init()
+st.set_page_config(page_title="Battle Royale", layout="wide")
 
-WIDTH, HEIGHT = 1280, 720
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Battle Royale - Python")
+# --- GAME STATE ---
+if "players" not in st.session_state:
+    st.session_state.players = 20
+    st.session_state.zone_radius = 100
+    st.session_state.health = 100
+    st.session_state.bots = [
+        {"x": random.randint(-50, 50), "y": random.randint(-50, 50), "alive": True}
+        for _ in range(19)
+    ]
 
-clock = pygame.time.Clock()
+st.title("🪖 Web Battle Royale (Prototype)")
+st.write("Drop → Loot → Fight → Survive → Win")
 
-# Colors
-SKY = (135, 206, 235)
-GROUND = (34, 139, 34)
+# --- ZONE LOGIC ---
+def in_zone(x, y, r):
+    return math.sqrt(x*x + y*y) < r
 
-# Player
-player = Player()
+st.session_state.zone_radius -= 0.2
 
-# Bots (19 bots + player = 20)
-bots = [Bot() for _ in range(19)]
+if st.session_state.zone_radius < 20:
+    st.session_state.zone_radius = 20
 
-# Zone
-zone = Zone()
+# --- PLAYER ---
+player_x, player_y = 0, 0
 
-running = True
-while running:
-    clock.tick(60)
+if not in_zone(player_x, player_y, st.session_state.zone_radius):
+    st.session_state.health -= 0.5
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+# --- BOTS ---
+for bot in st.session_state.bots:
+    if not bot["alive"]:
+        continue
 
-    # --- UPDATE ---
-    player.update(zone)
-    for bot in bots:
-        bot.update(player, zone)
-    zone.update()
+    bot["x"] += (player_x - bot["x"]) * 0.01
+    bot["y"] += (player_y - bot["y"]) * 0.01
 
-    alive_bots = sum(bot.alive for bot in bots)
-    pygame.display.set_caption(
-        f"Players Left: {alive_bots + 1}"
-    )
+    if not in_zone(bot["x"], bot["y"], st.session_state.zone_radius):
+        if random.random() < 0.05:
+            bot["alive"] = False
 
-    # --- DRAW ---
-    screen.fill(SKY)
+alive_bots = sum(bot["alive"] for bot in st.session_state.bots)
 
-    # Ground
-    pygame.draw.rect(screen, GROUND, (0, HEIGHT//2, WIDTH, HEIGHT//2))
+# --- UI ---
+col1, col2, col3 = st.columns(3)
 
-    zone.draw(screen)
-    player.draw(screen)
+col1.metric("❤️ Health", int(st.session_state.health))
+col2.metric("🧍 Players Left", alive_bots + 1)
+col3.metric("🟦 Zone Radius", int(st.session_state.zone_radius))
 
-    for bot in bots:
-        bot.draw(screen)
+# --- END GAME ---
+if st.session_state.health <= 0:
+    st.error("💀 You Died!")
+    st.stop()
 
-    pygame.display.flip()
+if alive_bots == 0:
+    st.success("🏆 Winner Winner Chicken Dinner!")
+    st.stop()
 
-pygame.quit()
+time.sleep(0.3)
+st.experimental_rerun()
