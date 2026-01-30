@@ -1,53 +1,60 @@
-import * as THREE from "https://cdn.skypack.dev/three";
-import { Player } from "./player.js";
-import { Bot } from "./bot.js";
-import { Zone } from "./zone.js";
+import pygame
+from player import Player
+from bot import Bot
+from zone import Zone
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+pygame.init()
 
-const camera = new THREE.PerspectiveCamera(
-  75, window.innerWidth / window.innerHeight, 0.1, 1000
-);
-camera.position.set(0, 20, 20);
+WIDTH, HEIGHT = 1280, 720
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Battle Royale - Python")
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+clock = pygame.time.Clock()
 
-// Ground
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(200, 200),
-  new THREE.MeshStandardMaterial({ color: 0x228b22 })
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
+# Colors
+SKY = (135, 206, 235)
+GROUND = (34, 139, 34)
 
-// Light
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+# Player
+player = Player()
 
-// Player
-const player = new Player(scene);
+# Bots (19 bots + player = 20)
+bots = [Bot() for _ in range(19)]
 
-// Bots
-const bots = [];
-for (let i = 0; i < 19; i++) {
-  bots.push(new Bot(scene));
-}
+# Zone
+zone = Zone()
 
-// Zone
-const zone = new Zone(scene);
+running = True
+while running:
+    clock.tick(60)
 
-function animate() {
-  requestAnimationFrame(animate);
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-  player.update(zone);
-  bots.forEach(bot => bot.update(player, zone));
-  zone.update();
+    # --- UPDATE ---
+    player.update(zone)
+    for bot in bots:
+        bot.update(player, zone)
+    zone.update()
 
-  document.getElementById("players").innerText =
-    `Players Left: ${1 + bots.filter(b => b.alive).length}`;
+    alive_bots = sum(bot.alive for bot in bots)
+    pygame.display.set_caption(
+        f"Players Left: {alive_bots + 1}"
+    )
 
-  renderer.render(scene, camera);
-}
-animate();
+    # --- DRAW ---
+    screen.fill(SKY)
+
+    # Ground
+    pygame.draw.rect(screen, GROUND, (0, HEIGHT//2, WIDTH, HEIGHT//2))
+
+    zone.draw(screen)
+    player.draw(screen)
+
+    for bot in bots:
+        bot.draw(screen)
+
+    pygame.display.flip()
+
+pygame.quit()
